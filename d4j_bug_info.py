@@ -980,6 +980,94 @@ def collect(args) -> dict:
     }
 
 
+
+def format_date_for_terminal(value: Optional[str]) -> str:
+    """Converte uma data ISO para formato legível sem descartar o fuso horário."""
+    if not value:
+        return "não disponível"
+    parsed = parse_dt(value)
+    if parsed is None:
+        return str(value)
+    rendered = parsed.strftime("%d/%m/%Y %H:%M:%S")
+    if parsed.tzinfo is not None:
+        offset = parsed.strftime("%z")
+        if offset == "+0000":
+            rendered += " UTC"
+        elif offset:
+            rendered += f" UTC{offset[:3]}:{offset[3:]}"
+    return rendered
+
+
+def print_temporal_summary(data: dict) -> None:
+    """Exibe no terminal as datas já coletadas e salvas no relatório JSON."""
+    temporal = data.get("temporal")
+    if not isinstance(temporal, dict):
+        return
+
+    log("=== INFORMAÇÕES TEMPORAIS ===")
+    log(f"  Commit com bug:       {format_date_for_terminal(temporal.get('buggy_commit_date'))}")
+    log(f"  Commit corrigido:     {format_date_for_terminal(temporal.get('fixed_commit_date'))}")
+
+    for label, key in (("Autoria do commit com bug", "buggy_author_date"),
+                       ("Autoria do commit corrigido", "fixed_author_date")):
+        value = temporal.get(key)
+        if value:
+            log(f"  {label}: {format_date_for_terminal(value)}")
+
+    interval = temporal.get("buggy_to_fixed_days")
+    if interval is not None:
+        log(f"  Intervalo entre commits: {interval} dia(s)")
+    parent = temporal.get("buggy_is_parent_of_fixed")
+    if parent is not None:
+        log(f"  Commit com bug é pai direto do corrigido: {'sim' if parent else 'não'}")
+
+    report = temporal.get("report")
+    if isinstance(report, dict):
+        log("  Relatório do bug:")
+        log(f"    Criado:     {format_date_for_terminal(report.get('created'))}")
+        log(f"    Resolvido:  {format_date_for_terminal(report.get('resolved'))}")
+        if report.get("report_to_resolution_days") is not None:
+            log(f"    Da criação à resolução: {report['report_to_resolution_days']} dia(s)")
+        if report.get("report_to_fixed_commit_days") is not None:
+            log(f"    Da criação ao commit corrigido: {report['report_to_fixed_commit_days']} dia(s)")
+        if report.get("note"):
+            log(f"    Observação: {report['note']}")
+    elif data.get("report"):
+        report_meta = data["report"]
+        if report_meta.get("created") or report_meta.get("resolved"):
+            log("  Relatório do bug:")
+            log(f"    Criado:     {format_date_for_terminal(report_meta.get('created'))}")
+            log(f"    Resolvido:  {format_date_for_terminal(report_meta.get('resolved'))}")
+        else:
+            log("  Datas do relatório: indisponíveis (verifique --fetch-report-dates e a conexão).")
+
+    histories = temporal.get("files_history") or []
+    if histories:
+        log("  Histórico dos arquivos:")
+        for item in histories:
+            log(f"    Arquivo: {item.get('path', '(caminho não informado)')}")
+            first = item.get("first_commit") or {}
+            last = item.get("last_change_before_buggy") or {}
+            log(f"      Primeiro commit: {format_date_for_terminal(first.get('date'))}")
+            log(f"      Última alteração antes do bug: {format_date_for_terminal(last.get('date'))}")
+            if item.get("days_since_last_change_before_buggy") is not None:
+                log(f"      Dias desde a última alteração: {item['days_since_last_change_before_buggy']}")
+            if item.get("file_age_days_at_buggy") is not None:
+                log(f"      Idade do arquivo na versão com bug: {item['file_age_days_at_buggy']} dia(s)")
+
+    method_histories = temporal.get("methods_history") or []
+    if method_histories:
+        log("  Histórico dos métodos (aproximado):")
+        for item in method_histories:
+            log(f"    Método: {item.get('signature', '(assinatura não informada)')} ({item.get('file', '')})")
+            first = item.get("introduced_or_first_seen") or {}
+            last = item.get("last_change_before_buggy") or {}
+            log(f"      Primeiro registro/introdução identificada: {format_date_for_terminal(first.get('date'))}")
+            log(f"      Última alteração antes do bug: {format_date_for_terminal(last.get('date'))}")
+            if item.get("commits_touching_range") is not None:
+                log(f"      Commits que tocaram o trecho: {item['commits_touching_range']}")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Coleta informações de um bug do Defects4J.")
     ap.add_argument("target", nargs="?", help="'Math-1' ou apenas o projeto (ex.: Math), seguido do número em 'bug'")
@@ -1040,6 +1128,7 @@ def main(argv=None) -> int:
         for m in data["affected_methods"]:
             where = "teste" if m.get("in_tests") else "fonte"
             log(f"  - {m['class']}.{m['signature']} [{m['change_type']}] ({where}, {m['file']})")
+        print_temporal_summary(data)
     return 0
 
 
