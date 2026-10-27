@@ -136,7 +136,7 @@ python3 d4j_bug_info.py Lang-1 \
 
 Essas informações podem não estar disponíveis para todos os projetos ou bugs. A obtenção de datas externas depende da existência de referências reconhecidas e do acesso às fontes consultadas.
 
-### 6. Exibir o relatório no terminal
+### 5. Exibir o relatório no terminal
 
 ```bash
 python3 d4j_bug_info.py Math-1 --stdout
