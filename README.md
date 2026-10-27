@@ -200,10 +200,13 @@ python3 d4j_bug_info.py \
 ```
 ### Exemplo: 
 
-```Entrada:
+Entrada:
+```bash
 python3 ~/d4j_bug_info.py --project-path ~/d4j_projects/Math_1_buggy --source-file src/main/java/org/apache/commons/math3/fraction/Fraction.java --line 215
 ```
-```Saída:
+
+Saída:
+```bash
 gravado: analise_projeto.json
 candidato a método focal: org.apache.commons.math3.fraction.Fraction.Fraction(double, double, int, int)
   arquivo/linhas: src/main/java/org/apache/commons/math3/fraction/Fraction.java:178-243
