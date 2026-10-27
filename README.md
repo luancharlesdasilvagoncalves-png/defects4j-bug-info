@@ -150,6 +150,47 @@ Além do Defects4J, a ferramenta oferece um modo de análise de projetos Java lo
 
 Nesse modo, a identificação do método pode ser realizada sem comparar versões com defeito e corrigida. É necessário fornecer uma linha relevante do código-fonte ou informações de stack trace.
 
+## Exemplo de execução
+
+Execute o script para coletar informações do bug `Math-1` do Defects4J:
+
+```bash
+python3 ~/d4j_bug_info.py Math-1
+```
+
+### Saída esperada
+
+```text
+[Math-1] coletando dados...
+  reutilizando checkout existente: /home/luan/d4j_work/Math-1/buggy
+  reutilizando checkout existente: /home/luan/d4j_work/Math-1/fixed
+gravado: Math-1.json
+resumo: 2 arquivo(s), +6/-0 linhas, 2 método(s) afetado(s)
+método focal: org.apache.commons.math3.fraction.BigFraction.BigFraction(double, double, int, int)
+  caminho: vários métodos alterados aparecem na pilha de erro à mesma distância da exceção (BigFraction.BigFraction(double, double, int, int), Fraction.Fraction(double, double, int, int)); foi escolhido o do primeiro teste de gatilho, org.apache.commons.math3.fraction.BigFractionTest::testDigitLimitConstructor (frame em BigFraction.java:306)
+  - org.apache.commons.math3.fraction.BigFraction.BigFraction(double, double, int, int) [modified] (fonte, src/main/java/org/apache/commons/math3/fraction/BigFraction.java)
+  - org.apache.commons.math3.fraction.Fraction.Fraction(double, double, int, int) [modified] (fonte, src/main/java/org/apache/commons/math3/fraction/Fraction.java)
+=== INFORMAÇÕES TEMPORAIS ===
+  Commit com bug:       31/08/2013 15:58:36 UTC
+  Commit corrigido:     31/08/2013 19:43:02 UTC
+  Autoria do commit com bug: 31/08/2013 15:58:36 UTC
+  Autoria do commit corrigido: 31/08/2013 19:43:02 UTC
+  Intervalo entre commits: 0.1559 dia(s)
+  Commit com bug é pai direto do corrigido: sim
+  Datas do relatório: indisponíveis (verifique --fetch-report-dates e a conexão).
+  Histórico dos arquivos:
+    Arquivo: src/main/java/org/apache/commons/math3/fraction/BigFraction.java
+      Primeiro commit: 28/03/2009 18:24:11 UTC
+      Última alteração antes do bug: 27/02/2012 04:38:45 UTC
+      Dias desde a última alteração: 551.4721
+      Idade do arquivo na versão com bug: 1616.8989 dia(s)
+    Arquivo: src/main/java/org/apache/commons/math3/fraction/Fraction.java
+      Primeiro commit: 05/02/2005 05:49:45 UTC
+      Última alteração antes do bug: 01/08/2012 21:24:27 UTC
+      Dias desde a última alteração: 394.7737
+      Idade do arquivo na versão com bug: 3129.4228 dia(s)
+```
+
 ### 1. Localizar o método que contém uma linha
 
 ```bash
