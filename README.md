@@ -144,12 +144,6 @@ python3 d4j_bug_info.py Math-1 --stdout
 
 A opção `--stdout` direciona o relatório JSON para a saída padrão, em vez de depender de um arquivo como saída principal.
 
-## Análise de projetos Java próprios
-
-Além do Defects4J, a ferramenta oferece um modo de análise de projetos Java locais.
-
-Nesse modo, a identificação do método pode ser realizada sem comparar versões com defeito e corrigida. É necessário fornecer uma linha relevante do código-fonte ou informações de stack trace.
-
 ## Exemplo de execução
 
 Execute o script para coletar informações do bug `Math-1` do Defects4J:
@@ -190,6 +184,11 @@ método focal: org.apache.commons.math3.fraction.BigFraction.BigFraction(double,
       Dias desde a última alteração: 394.7737
       Idade do arquivo na versão com bug: 3129.4228 dia(s)
 ```
+## Análise de projetos Java próprios
+
+Além do Defects4J, a ferramenta oferece um modo de análise de projetos Java locais.
+
+Nesse modo, a identificação do método pode ser realizada sem comparar versões com defeito e corrigida. É necessário fornecer uma linha relevante do código-fonte ou informações de stack trace.
 
 ### 1. Localizar o método que contém uma linha
 
