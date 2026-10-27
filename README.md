@@ -243,7 +243,3 @@ Essa estrutura é uma sugestão. Os relatórios de exemplo só devem ser incluí
 ## Objetivo do projeto
 
 O objetivo é automatizar a coleta e a organização de informações relevantes para a análise de defeitos em software Java, facilitando a investigação de bugs, a identificação de métodos potencialmente afetados e a realização de estudos sobre histórico, reprodução e correção de defeitos.
-
-## Licença
-
-Defina aqui a licença deste projeto, por exemplo, MIT, caso essa seja a licença escolhida. Antes de publicar, verifique também as condições de uso e distribuição das ferramentas e dos dados externos utilizados, incluindo o Defects4J.
