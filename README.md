@@ -198,10 +198,17 @@ python3 d4j_bug_info.py \
     --source-file src/main/java/p/Calculadora.java \
     --line 42
 ```
+### Exemplo: 
 
-O comando procura o método Java que contém a linha 42 do arquivo indicado.
-
-**Importante:** `./meu-projeto` é um exemplo. Substitua-o pelo caminho de um projeto Java que realmente exista no seu computador.
+```Entrada:
+python3 ~/d4j_bug_info.py --project-path ~/d4j_projects/Math_1_buggy --source-file src/main/java/org/apache/commons/math3/fraction/Fraction.java --line 215
+```
+```Saída:
+gravado: analise_projeto.json
+candidato a método focal: org.apache.commons.math3.fraction.Fraction.Fraction(double, double, int, int)
+  arquivo/linhas: src/main/java/org/apache/commons/math3/fraction/Fraction.java:178-243
+critério: método que contém a linha informada
+```
 
 ### 2. Analisar um arquivo de stack trace
 
