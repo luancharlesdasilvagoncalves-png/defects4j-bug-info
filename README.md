@@ -171,7 +171,6 @@ método focal: org.apache.commons.math3.fraction.BigFraction.BigFraction(double,
   Autoria do commit corrigido: 31/08/2013 19:43:02 UTC
   Intervalo entre commits: 0.1559 dia(s)
   Commit com bug é pai direto do corrigido: sim
-  Datas do relatório: indisponíveis (verifique --fetch-report-dates e a conexão).
   Histórico dos arquivos:
     Arquivo: src/main/java/org/apache/commons/math3/fraction/BigFraction.java
       Primeiro commit: 28/03/2009 18:24:11 UTC
