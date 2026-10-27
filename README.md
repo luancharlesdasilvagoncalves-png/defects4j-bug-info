@@ -105,15 +105,7 @@ O fluxo geral de análise é:
 7. Selecionar um método focal candidato.
 8. Gerar um relatório JSON.
 
-### 2. Informar projeto e bug separadamente
-
-```bash
-python3 d4j_bug_info.py Math 1
-```
-
-Essa forma representa o mesmo projeto e identificador do exemplo anterior.
-
-### 3. Definir o diretório de saída e incluir o código dos métodos
+### 2. Definir o diretório de saída e incluir o código dos métodos
 
 ```bash
 python3 d4j_bug_info.py Math 1 \
@@ -123,7 +115,7 @@ python3 d4j_bug_info.py Math 1 \
 
 O relatório será salvo no diretório `dados`, e a opção `--with-source` solicita a inclusão do código-fonte dos métodos nos resultados, conforme os recursos disponíveis na implementação.
 
-### 4. Verificar a reprodução do bug
+### 3. Verificar a reprodução do bug
 
 ```bash
 python3 d4j_bug_info.py Math-1 --verify
@@ -131,7 +123,7 @@ python3 d4j_bug_info.py Math-1 --verify
 
 A opção `--verify` solicita a compilação e a execução dos testes de reprodução nas versões com defeito e corrigida. O resultado depende da configuração do ambiente e da disponibilidade dos testes necessários.
 
-### 5. Consultar informações temporais
+### 4. Consultar informações temporais
 
 ```bash
 python3 d4j_bug_info.py Lang-1 \
