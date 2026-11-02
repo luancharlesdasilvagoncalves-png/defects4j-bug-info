@@ -28,7 +28,7 @@ Estrutura do JSON (schema_version 1.0):
     versions        : {buggy: {...commit...}, fixed: {...commit...}}
     reproduction    : {commands, layout, trigger_tests, modified_classes, verification}
     changes         : {source_files, test_files, summary}         (arquivos, hunks e linhas)
-    focal_method    : método focal escolhido, o caminho seguido para achá-lo e os candidatos
+    focal_method    : método focal principal; focal_methods lista todos os focais quando há empate
     affected_methods: [{file, class, method, signature, kind, change_type, buggy{...}, fixed{...}}]
     non_method_changes: linhas alteradas fora de qualquer método (campos, imports, comentários...)
     temporal        : {datas dos commits, intervalo, histórico dos arquivos (e dos métodos, opcional)}
@@ -102,6 +102,16 @@ def delta_days(a: Optional[dt.datetime], b: Optional[dt.datetime]) -> Optional[f
         a = a.replace(tzinfo=a.tzinfo or dt.timezone.utc)
         b = b.replace(tzinfo=b.tzinfo or dt.timezone.utc)
     return round((b - a).total_seconds() / 86400.0, 4)
+
+
+def delta_hours(a: Optional[dt.datetime], b: Optional[dt.datetime]) -> Optional[float]:
+    """Horas de a até b (b - a)."""
+    if a is None or b is None:
+        return None
+    if (a.tzinfo is None) != (b.tzinfo is None):
+        a = a.replace(tzinfo=a.tzinfo or dt.timezone.utc)
+        b = b.replace(tzinfo=b.tzinfo or dt.timezone.utc)
+    return round((b - a).total_seconds() / 3600.0, 4)
 
 
 def iso(d: Optional[dt.datetime]) -> Optional[str]:
@@ -196,7 +206,6 @@ class Defects4J:
 
     def checkout(self, project: str, n: int, version: str, dest: Path) -> None:
         if (dest / ".defects4j.config").exists():
-            log(f"  reutilizando checkout existente: {dest}")
             return
         if dest.exists() and any(dest.iterdir()):
             raise D4JError(f"{dest} já existe e não é um checkout do Defects4J; apague-o ou use outro --workdir.")
@@ -554,7 +563,6 @@ def _focal_result(m: dict, reason: str, path: str, cands: list[dict]) -> dict:
         "file": m["file"], "class": m["class"], "method": m["method"], "signature": m["signature"],
         "kind": m["kind"], "change_type": m["change_type"],
         "reason": reason,   # código curto do critério usado
-        "path": path,       # explicação, em português, do caminho seguido para chegar a este método
         "n_affected": len(cands),
         "candidates": [f"{c['class']}.{c['signature']}" for c in cands],
     }
@@ -565,15 +573,9 @@ def _short(m: dict) -> str:
 
 
 def choose_focal(methods: list[dict], tests: list[dict]) -> Optional[dict]:
-    """Escolhe o método focal entre os métodos afetados (só código de fonte) e explica o caminho seguido.
+    """Identifica um ou mais métodos focais entre os métodos afetados (somente código-fonte).
 
-    Critérios, em ordem:
-      1. unico_metodo      : só há um método afetado.
-      2. stack_trace       : método (versão buggy) que contém o frame mais próximo da exceção na pilha de
-                             erro dos testes de gatilho.
-      3. teste_de_gatilho  : método da classe que o teste de gatilho exercita (BigFractionTest -> BigFraction).
-      4. mais_linhas       : método com mais linhas alteradas.
-      5. primeiro_na_ordem : primeiro método do diff (desempate final).
+    Quando as evidências empatam, retorna todos os candidatos empatados em `focal_methods`.
     """
     cand = [m for m in methods if not m.get("in_tests")]
     if not cand:
@@ -603,16 +605,24 @@ def choose_focal(methods: list[dict], tests: list[dict]) -> Optional[dict]:
             path = (f"é o único método alterado que aparece na pilha de erro dos testes de gatilho "
                     f"(teste {top['test']}, frame em {where})")
         else:
+            # Se distância da exceção e frequência nos testes empatam, não há
+            # evidência suficiente para escolher apenas um método focal.
+            tied = [(ci, info) for ci, info in ranked
+                    if (info["best"], -info["tests"]) == (top["best"], -top["tests"])]
+            if len(tied) > 1:
+                names = ", ".join(_short(cand[ci]) for ci, _ in tied)
+                path = (f"as evidências da pilha de erro não distinguem estes métodos, que aparecem "
+                        f"à mesma distância da exceção e com a mesma frequência: {names}")
+                result = _focal_result(cand[top_ci], "stack_trace_ambiguous", path, cand)
+                result["focal_methods"] = [
+                    _focal_result(cand[ci], "stack_trace_ambiguous", path, cand)
+                    for ci, _ in tied
+                ]
+                return result
             others = ", ".join(_short(cand[ci]) for ci, _ in ranked[1:])
-            second = ranked[1][1]
-            if (second["best"], -second["tests"]) == (top["best"], -top["tests"]):
-                path = (f"vários métodos alterados aparecem na pilha de erro à mesma distância da exceção "
-                        f"({_short(cand[top_ci])}, {others}); foi escolhido o do primeiro teste de gatilho, "
-                        f"{top['test']} (frame em {where})")
-            else:
-                path = (f"na pilha de erro do teste {top['test']}, o frame mais próximo da exceção que está "
-                        f"dentro de um método alterado é {where}; os outros métodos alterados que aparecem "
-                        f"na pilha ficam mais longe da exceção: {others}")
+            path = (f"na pilha de erro do teste {top['test']}, o frame mais próximo da exceção que está "
+                    f"dentro de um método alterado é {where}; os outros métodos alterados que aparecem "
+                    f"na pilha ficam mais longe da exceção: {others}")
         return _focal_result(cand[top_ci], "stack_trace", path, cand)
 
     # 3) classe exercitada pelo teste de gatilho (BigFractionTest -> BigFraction)
@@ -647,8 +657,17 @@ def choose_focal(methods: list[dict], tests: list[dict]) -> Optional[dict]:
         path = prefix + (f"foi escolhido o de maior alteração ({best} linhas alteradas, contra no máximo "
                          f"{rest} nos demais)")
         return _focal_result(top[0], "mais_linhas", path, cand)
-    path = prefix + f"há empate no número de linhas alteradas ({best}); foi escolhido o primeiro método na ordem do diff"
-    return _focal_result(top[0], "primeiro_na_ordem", path, cand)
+    if len(top) > 1:
+        names = ", ".join(_short(m) for m in top)
+        path = prefix + (f"as evidências não distinguem estes métodos, que têm o mesmo número "
+                         f"de linhas alteradas ({best}): {names}")
+        result = _focal_result(top[0], "empate_evidencias", path, cand)
+        result["focal_methods"] = [
+            _focal_result(m, "empate_evidencias", path, cand) for m in top
+        ]
+        return result
+    path = prefix + f"foi identificado um único método com {best} linhas alteradas"
+    return _focal_result(top[0], "mais_linhas", path, cand)
 
 
 # --------------------------------------------------------------------------- #
@@ -837,7 +856,6 @@ def collect(args) -> dict:
     project, n = parse_target(args.target, args.bug)
     project = d4j.canon_project(project)
     bug_id = f"{project}-{n}"
-    log(f"[{bug_id}] coletando dados...")
     get_indexer = functools.lru_cache(maxsize=1)(make_indexer)
     get_indexer()  # falha cedo, antes dos checkouts, se faltar tree-sitter
 
@@ -907,7 +925,7 @@ def collect(args) -> dict:
         "fixed_commit_date": versions["fixed"].get("commit_date"),
         "buggy_author_date": versions["buggy"].get("author_date"),
         "fixed_author_date": versions["fixed"].get("author_date"),
-        "buggy_to_fixed_days": delta_days(bd, fd),
+        "buggy_to_fixed_hours": delta_hours(bd, fd),
         "buggy_is_parent_of_fixed": buggy_rev in (versions["fixed"].get("parents") or []) if versions["fixed"].get("parents") else None,
         "report": None,
         "files_history": [],
@@ -968,6 +986,7 @@ def collect(args) -> dict:
             },
         },
         "focal_method": focal,
+        "focal_methods": (focal.get("focal_methods", [focal]) if focal else []),
         "affected_methods": src_methods + ([{**m, "in_tests": True} for m in test_methods] if test_methods else []),
         "non_method_changes": src_non + test_non,
         "temporal": temporal,
@@ -1008,19 +1027,11 @@ def print_temporal_summary(data: dict) -> None:
     log(f"  Commit com bug:       {format_date_for_terminal(temporal.get('buggy_commit_date'))}")
     log(f"  Commit corrigido:     {format_date_for_terminal(temporal.get('fixed_commit_date'))}")
 
-    for label, key in (("Autoria do commit com bug", "buggy_author_date"),
-                       ("Autoria do commit corrigido", "fixed_author_date")):
-        value = temporal.get(key)
-        if value:
-            log(f"  {label}: {format_date_for_terminal(value)}")
-
-    interval = temporal.get("buggy_to_fixed_days")
+    interval = temporal.get("buggy_to_fixed_hours")
+    if interval is None and temporal.get("buggy_to_fixed_days") is not None:
+        interval = round(temporal["buggy_to_fixed_days"] * 24, 4)
     if interval is not None:
-        log(f"  Intervalo entre commits: {interval} dia(s)")
-    parent = temporal.get("buggy_is_parent_of_fixed")
-    if parent is not None:
-        log(f"  Commit com bug é pai direto do corrigido: {'sim' if parent else 'não'}")
-
+        log(f"  Intervalo entre commits: {interval} hora(s)")
     report = temporal.get("report")
     if isinstance(report, dict):
         log("  Relatório do bug:")
@@ -1038,8 +1049,6 @@ def print_temporal_summary(data: dict) -> None:
             log("  Relatório do bug:")
             log(f"    Criado:     {format_date_for_terminal(report_meta.get('created'))}")
             log(f"    Resolvido:  {format_date_for_terminal(report_meta.get('resolved'))}")
-        else:
-            log("  Datas do relatório: indisponíveis (verifique --fetch-report-dates e a conexão).")
 
     histories = temporal.get("files_history") or []
     if histories:
@@ -1123,9 +1132,16 @@ def main(argv=None) -> int:
             f"{s['methods_affected']} método(s) afetado(s)")
         fm = data.get("focal_method")
         if fm:
-            log(f"método focal: {fm['class']}.{fm['signature']}")
-            log(f"  caminho: {fm['path']}")
-        for m in data["affected_methods"]:
+            focal_methods = data.get("focal_methods") or [fm]
+            if len(focal_methods) == 1:
+                log(f"método focal: {focal_methods[0]['class']}.{focal_methods[0]['signature']}")
+            else:
+                log(f"métodos focais ({len(focal_methods)}):")
+                for candidate in focal_methods:
+                    log(f"  - {candidate['class']}.{candidate['signature']}")
+        affected_methods = data.get("affected_methods", [])
+        log(f"métodos afetados ({len(affected_methods)}):")
+        for m in affected_methods:
             where = "teste" if m.get("in_tests") else "fonte"
             log(f"  - {m['class']}.{m['signature']} [{m['change_type']}] ({where}, {m['file']})")
         print_temporal_summary(data)
