@@ -155,22 +155,18 @@ python3 ~/d4j_bug_info.py Math-1
 ### Saída esperada
 
 ```text
-[Math-1] coletando dados...
-  reutilizando checkout existente: /home/luan/d4j_work/Math-1/buggy
-  reutilizando checkout existente: /home/luan/d4j_work/Math-1/fixed
 gravado: Math-1.json
 resumo: 2 arquivo(s), +6/-0 linhas, 2 método(s) afetado(s)
-método focal: org.apache.commons.math3.fraction.BigFraction.BigFraction(double, double, int, int)
-  caminho: vários métodos alterados aparecem na pilha de erro à mesma distância da exceção (BigFraction.BigFraction(double, double, int, int), Fraction.Fraction(double, double, int, int)); foi escolhido o do primeiro teste de gatilho, org.apache.commons.math3.fraction.BigFractionTest::testDigitLimitConstructor (frame em BigFraction.java:306)
+métodos focais (2):
+  - org.apache.commons.math3.fraction.BigFraction.BigFraction(double, double, int, int)
+  - org.apache.commons.math3.fraction.Fraction.Fraction(double, double, int, int)
+métodos afetados (2):
   - org.apache.commons.math3.fraction.BigFraction.BigFraction(double, double, int, int) [modified] (fonte, src/main/java/org/apache/commons/math3/fraction/BigFraction.java)
   - org.apache.commons.math3.fraction.Fraction.Fraction(double, double, int, int) [modified] (fonte, src/main/java/org/apache/commons/math3/fraction/Fraction.java)
 === INFORMAÇÕES TEMPORAIS ===
   Commit com bug:       31/08/2013 15:58:36 UTC
   Commit corrigido:     31/08/2013 19:43:02 UTC
-  Autoria do commit com bug: 31/08/2013 15:58:36 UTC
-  Autoria do commit corrigido: 31/08/2013 19:43:02 UTC
-  Intervalo entre commits: 0.1559 dia(s)
-  Commit com bug é pai direto do corrigido: sim
+  Intervalo entre commits: 3.7406 hora(s)
   Histórico dos arquivos:
     Arquivo: src/main/java/org/apache/commons/math3/fraction/BigFraction.java
       Primeiro commit: 28/03/2009 18:24:11 UTC
