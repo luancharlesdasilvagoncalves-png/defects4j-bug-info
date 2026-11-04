@@ -1130,6 +1130,30 @@ def main(argv=None) -> int:
         s = data["changes"]["summary"]
         log(f"resumo: {s['source_files_changed']} arquivo(s), +{s['source_lines_added']}/-{s['source_lines_removed']} linhas, "
             f"{s['methods_affected']} método(s) afetado(s)")
+
+        # Testes de gatilho cadastrados pelo Defects4J para reproduzir o bug.
+        trigger_tests = data.get("reproduction", {}).get("trigger_tests", [])
+        verification = data.get("reproduction", {}).get("verification") or {}
+        failing_buggy = set(verification.get("failing_on_buggy", []))
+        failing_fixed = set(verification.get("failing_on_fixed", []))
+        if trigger_tests:
+            log(f"testes que reproduzem a falha ({len(trigger_tests)}):")
+            for test in trigger_tests:
+                name = test.get("test", "teste desconhecido")
+                detail = ""
+                if verification:
+                    if name in failing_buggy and name not in failing_fixed:
+                        detail = " [falha no buggy; passa no fixed]"
+                    elif name in failing_buggy and name in failing_fixed:
+                        detail = " [falha no buggy e no fixed]"
+                    elif name not in failing_buggy and name in failing_fixed:
+                        detail = " [passa no buggy; falha no fixed]"
+                    else:
+                        detail = " [não falhou na verificação]"
+                log(f"  - {name}{detail}")
+        else:
+            log("testes que reproduzem a falha: nenhum teste de gatilho encontrado")
+
         fm = data.get("focal_method")
         if fm:
             focal_methods = data.get("focal_methods") or [fm]
